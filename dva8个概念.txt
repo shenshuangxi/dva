@@ -1,0 +1,151 @@
+antd dva 
+数据流向
+
+view -----> action ---->reducer -------> view
+可以解释为   
+		用户通过 与界面交互 触发动作  该动作通过 dispatch 发起一个 action 
+		该action 如果是同步行为  会通过reducer 改变页面的 State
+		如果action 为异步行为 那么触发 Effects  然后再通过reducer 改变页面的 State
+		而State 的改变影响 View的显示
+		
+	
+8个概念	
+
+一个典型的Model
+export default {
+  namespace: 'todos',
+  state: [],
+
+  reducers: {
+    // 保存 todos
+    save(state, { payload }) {
+      return payload;
+    },
+
+    // 添加 todo
+    add(state, { payload }) {
+      return [...state, payload];
+    },
+  },
+
+  effects: {
+    // 异步获取 todos，然后通过 action 保存
+    *fetch(action, { call, put }) {
+      const todos = yield call(service.fetchTodos);
+      yield put({ type: 'save', payload: todos });
+    },
+  },
+}
+
+
+Model 
+	非MVC中的M 而是领域模型 用于把数据和相关逻辑聚合在一起
+	包含5个属性
+		namespace
+		state
+		reducers
+		effects
+		subscriptions
+		
+		
+	Reducer 函数
+		该函数接收两个参数  一个为之前累计的结果  一个为当前需要累计的 值 使用纯函数
+		之前累计的值 为当前Model中的State  当前需要累计的值 为action中携带的信息  最后返回一个新的 State 给到View
+		
+	Effect
+		在dva中 引入redux-sagas做异步流程控制，
+		redux-sagas
+			利用Generator函数的概念 (即利用ES6中的协程实现 可以交出函数的执行权)
+				function* gen(x){
+				  var y = yield x + 2;
+				  return y;
+				}
+			不同于一般函数  该函数可以暂停执行 所以函数名之前需要加上* 以示区别。
+			var g = gen(1);
+			g.next() // { value: 3, done: false }  返回yield 后面的 表达式
+			g.next() // { value: undefined, done: true }
+			g.next(2) // { value: 2, done: true }
+			
+			g为函数内部指针
+			
+	Subscription
+		用于订阅一个数据源，然后根据条件dispatch需要的action
+		示例
+		app.model({
+		  namespace: 'count',
+		  subscriptions: {
+			keyEvent(dispatch) {
+			  key('xx', () => { dispatch({type:'add'}) });
+			},
+		  }
+		});
+
+State
+	State 表示应用的数据层，由 model 的 state 组成全局的 state
+	State表示Model的状态数据，该State对象(javascript对象 可以为任何值) 不可以直接改变。
+	全局State
+		{
+		  todos:[],
+		  visibilityFilter:'SHOW_ALL',
+		}
+	Model State
+		app.model({namespace:'todos', state: []});
+		app.model({namespace:'visibilityFilter', state: 'SHOW_ALL'});
+	
+Action
+	Action 普通的JavaScript对象，用于改变State的唯一途径，该对象必须有一个 type 用于指定具体的行为的属性。 其他属性可以自定义
+	可以通过 dispatch 函数 发起action 
+	注意:
+		dispatch 是在组件connect Models 后 通过props传入
+	示例
+	dispatch({
+		type: 'add',
+	})
+	
+	dispatch 函数
+		用于触发action的函数，在dva中 connect Model 的组件可以访问到 dispatch  可以调用 Model中的 Reducer/Effect
+		示例
+		dispatch({
+			type: 'user/add',  //在 Model 外调用需要 namespace
+			paylo: {}			//需要的传递的信息
+		})
+	
+
+	
+Router
+	前端路由， 可以通过http://mdn.beonex.com/en/DOM/window.history.html 
+	来控制浏览器url变化
+	dva 实例通过router方法来控制路由， 使用react-router
+	示例
+	import { Router, Route } from 'dva/router';
+	app.router(({history}) =>
+	  <Router history={history}>
+		<Route path="/" component={HomePage} />
+	  </Router>
+	);
+	
+	Route Components
+		在组件设计方法中(https://github.com/dvajs/dva-docs/blob/master/v1/zh-cn/tutorial/04-%E7%BB%84%E4%BB%B6%E8%AE%BE%E8%AE%A1%E6%96%B9%E6%B3%95.md)
+		提到过Container Components 但在dva中可以将其约束为 Route Components
+		以为在dva中通常以页面维度来设计Container Components
+		所以在 dva中  需要connect Model的组件都是 Route Components  组织在/routes/目录下
+		而在/components/目录下则是纯组件（Presentational Components）
+	
+	
+	
+
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
